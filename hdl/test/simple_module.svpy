@@ -1,0 +1,29 @@
+// Run arbitrary Python code inside the braces.
+// The final ` removes the whitespace inserted by em.py after evaluating the python code
+`{myvar = 4}`
+
+// To use a value from Python, you can use a tick followed by the variable name
+// myvar = `myvar
+
+// You can print Python expressions using parentheses
+// myvar+1 = `(myvar+1), which is pretty neat
+
+// If you need additional text after the variable, wrap the variable in another ` plus whitespace
+// port_name = in`myvar` _r
+
+// If you want to add an SV compiler directive, use multiple ticks
+``define LYCAN2
+
+module simple_module(
+// Control flow constructs use brackets
+`[for i in range(myvar)]`
+    input in`i,
+`[end for]`
+
+`[for i in range(myvar)]`
+    output outp`i,
+`[end for]`
+    output final_output
+);
+
+endmodule

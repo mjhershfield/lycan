@@ -1,0 +1,9 @@
+[project]
+name = "lycan2"
+version = "0.1.0"
+description = "Development dependencies for Lycan 2"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "empy>=4.2",
+]
