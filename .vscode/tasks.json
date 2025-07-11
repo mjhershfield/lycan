@@ -1,0 +1,43 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Lycan Lint (Slang)",
+            "type": "shell",
+            "command": "uv",
+            "args": [
+                "run",
+                "${workspaceFolder}/scripts/lycan",
+                "lint"
+            ],
+            "options": {
+                "cwd": "${fileDirname}",
+                "env": {
+                    "PATH": "${workspaceFolder}/scripts:${env:PATH}"
+                }
+            },
+            "presentation": {
+                "clear": true,
+                "reveal": "never"
+            },
+            "problemMatcher": {
+                "owner": "lycan",
+                "fileLocation": [
+                    "relative",
+                    "${fileDirname}"
+                ],
+                "source": "slang",
+                "pattern": {
+                    "regexp": "^(.+?):([0-9]+):([0-9]+): (error|warning): (.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        }
+    ]
+}

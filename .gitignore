@@ -1,0 +1,6 @@
+# Ignore artifacts from Python and tool runs
+**/__pycache__
+**/output
+
+# Ignore auto-generated files
+*.gsv

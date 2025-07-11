@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+
+import argparse
+import git
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+# TODO: filelist generation?
+# TODO: prepro many files into a single enormous debug output
+
+def get_repo_root() -> Path:
+    repo = git.Repo('.', search_parent_directories=True)
+    return Path(repo.working_dir)
+
+def get_hdl_block_name() -> str:
+    repo_root = get_repo_root()
+    cwd = Path(os.getcwd())
+    try:
+        if cwd == repo_root/"hdl":
+            raise ValueError
+        cwd_rel_root = cwd.relative_to(repo_root/"hdl")
+    except:
+        print("ERROR: You are not currently inside an HDL block!")
+        exit(1)
+    while (len(cwd_rel_root.parents)) != 1:
+        cwd_rel_root = cwd_rel_root.parent
+    return str(cwd_rel_root)
+
+def action_generate(args):
+    print("Processing RTL...")
+    block_root = args.repo_root/"hdl"/args.block
+    src_dir = block_root/"src"
+    rtl_dir = block_root/"rtl"
+    # Convert all non-Python files in src with extensions ending in "py"
+    for src_file in src_dir.iterdir():
+        if src_file.suffix == "py" or src_file.suffix[-2:] != "py":
+            continue
+        rtl_file = rtl_dir/(src_file.stem+".g"+src_file.suffix[1:-2])
+        print(f"Generating {rtl_file.relative_to(block_root)} from {src_file.relative_to(block_root)}")
+        # TODO: for some reason, using the prepro functions directly breaks after the 1st file
+        # completes. Subprocess is ok though, seems a little slower
+        subprocess.run(["prepro", "-o", rtl_file, src_file])
+    print("Finished processing RTL!")
+
+def action_lint(args):
+    print("Processing RTL...")
+    block_root = args.repo_root/"hdl"/args.block
+    src_dir = block_root/"src"
+    rtl_dir = block_root/"rtl"
+    # Convert all non-Python files in src with extensions ending in "py"
+    in_files_list = []
+    for src_file in src_dir.iterdir():
+        if src_file.suffix == "py" or src_file.suffix[-2:] != "py":
+            continue
+        in_files_list.append(src_file)
+
+    if len(in_files_list) == 0:
+        raise RuntimeError("No files to lint!")
+    combined_file = block_root/"output/lint/combined.gsv"
+    subprocess.run(["prepro", "-d", "-o", combined_file] + in_files_list )
+    print("Finished processing RTL!")
+    print("Running linter...")
+    # TODO: Support verilator, slang, and Vivado?
+    subprocess.run(["slang", "-Weverything", combined_file])
+    print("Finished linting!")
+
+def action_elab(args):
+    print("ELAB ACTION")
+
+def action_syn(args):
+    print("SYN ACTION")
+
+def action_impl(args):
+    print("IMPL ACTION")
+
+def action_bit(args):
+    print("BIT ACTION")
+
+def action_flash(args):
+    print("FLASH ACTION")
+
+def action_verif(args):
+    print("VERIF ACTION")
+
+def action_formal(args):
+    print("FORMAL ACTION")
+
+def action_periph(args):
+    print("PERIPH ACTION")
+
+def action_top(args):
+    print("TOP ACTION")
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog="lycan")
+    parser.add_argument("-t", "--top", help="Set top-level module (default $BNAME_top)")
+    parser.add_argument("-b", "--block", help="Set block name (default derived from current directory)")
+    subparsers = parser.add_subparsers()
+    parser_generate = subparsers.add_parser("generate", help="Generate RTL for the current HDL block")
+    parser_generate.set_defaults(action=action_generate)
+    parser_lint = subparsers.add_parser("lint", help="Lint the current HDL block")
+    parser_lint.set_defaults(action=action_lint)
+    parser_elab = subparsers.add_parser("elab", help="Elaborate the current HDL block")
+    parser_elab.set_defaults(action=action_elab)
+    parser_syn = subparsers.add_parser("syn", help="Synthesize the current HDL block")
+    parser_syn.set_defaults(action=action_syn)
+    parser_impl = subparsers.add_parser("impl", help="P&R the current HDL block")
+    parser_impl.set_defaults(action=action_impl)
+    parser_bit = subparsers.add_parser("bit", help="Create bitstream for the current HDL block")
+    parser_bit.set_defaults(action=action_bit)
+    parser_flash = subparsers.add_parser("flash", help="Flash bitstream to the FPGA")
+    parser_flash.set_defaults(action=action_flash)
+    parser_verif = subparsers.add_parser("verif", help="Run functional verification for the current HDL block")
+    parser_verif.set_defaults(action=action_verif)
+    parser_formal = subparsers.add_parser("formal", help="Run formal verification for the current HDL block")
+    parser_formal.set_defaults(action=action_formal)
+    parser_periph = subparsers.add_parser("periph", help="Periphal block-specific actions")
+    parser_periph.set_defaults(action=action_periph)
+    parser_top = subparsers.add_parser("top", help="Top-level block-specific actions")
+    parser_top.set_defaults(action=action_top)
+
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+    args.repo_root = get_repo_root()
+
+    # TODO: ensure that block value and top value are valid locations
+    if args.block == None:
+        args.block = get_hdl_block_name()
+    if args.top == None:
+        args.top = args.block + "_top"
+
+    print(f"Repo root: {get_repo_root()}")
+    print(f"Current block: {args.block}")
+    print(f"Top-level module: {args.top}")
+    # try:
+    #     args.action(args)
+    # except AttributeError:
+        # print("ERROR: No valid action listed. Run `lycan --help` to see the available actions")
+    args.action(args)
+
+
+if __name__ == "__main__":
+    main()

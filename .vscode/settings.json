@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.gsv": "systemverilog",
+        "*.svpy": "systemverilog"
+    },
+    "triggerTaskOnSave.tasks": {
+        "Lycan Lint (Slang)": [
+            "*.svpy",
+            "*.gsv",
+            "*.sv"
+        ]
+    }
+}

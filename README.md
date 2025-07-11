@@ -9,5 +9,5 @@ To manage Python dependencies, this project is using uv.
 
 ```bash
 uv sync # create venv and install Python packages
-source .venv/bin/activate # activate venv
+source scripts/lycan_env.sh # activate venv
 ```
