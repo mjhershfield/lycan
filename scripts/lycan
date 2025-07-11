@@ -29,13 +29,58 @@ def get_hdl_block_name() -> str:
         cwd_rel_root = cwd_rel_root.parent
     return str(cwd_rel_root)
 
+def process_filelist(repo_root: Path, filelist_path: Path, pregen=False) -> [str]:
+    paths = []
+    with open(filelist_path, "r") as filelist:
+        for raw_line in filelist:
+            line = raw_line.rstrip()
+            # Parse line.
+            if len(line) == 0 or line[0] == "#":
+                continue
+            elif "." in line:
+                # treat as filepath
+                current_path = repo_root/"hdl"/line
+                if current_path.exists():
+                    if pregen:
+                        # convert g* file extensions to *py
+                        pregen_path = current_path.parents[1]/"src"/(current_path.stem + "." + current_path.suffix[2:] + "py")
+                        # print(f"INFO: prepro full path is {pregen_path}")
+                        paths.append(pregen_path.resolve())
+                    else:
+                        # Leave file extensions as is
+                        paths.append(current_path.resolve())
+                else:
+                    print(f"WARNING: ({filelist_path}), path {current_path} not found")
+            else:
+                split_path = line.split("/")
+                if len(split_path) != 2:
+                    raise RuntimeError(f"ERROR: ({filelist_path}), unable to parse line '{line}'")
+
+                block = split_path[0]
+                top = split_path[1]
+                paths.extend(process_filelist(repo_root, repo_root/"hdl"/block/"deps"/(top+".fpy"), pregen=pregen))
+
+    # print(f"INFO: ({filelist_path}), generated dependency list {paths}")
+    return paths
+
+def compute_deps(args, pregen=False):
+    top_filelist_path = args.repo_root/"hdl"/args.block/"deps"/(str(args.top)+".fpy")
+    dep_list = process_filelist(args.repo_root, top_filelist_path, pregen=pregen)
+    # print(f"INFO: ({top_filelist_path}), generated dependency list {dep_list}")
+    return dep_list
+
 def action_generate(args):
     print("Processing RTL...")
     block_root = args.repo_root/"hdl"/args.block
     src_dir = block_root/"src"
     rtl_dir = block_root/"rtl"
+    dep_list = []
+    if args.top == None:
+        dep_list = list(src_dir.iterdir())
+    else:
+        dep_list = compute_deps(args, pregen=True)
     # Convert all non-Python files in src with extensions ending in "py"
-    for src_file in src_dir.iterdir():
+    for src_file in dep_list:
         if src_file.suffix == "py" or src_file.suffix[-2:] != "py":
             continue
         rtl_file = rtl_dir/(src_file.stem+".g"+src_file.suffix[1:-2])
@@ -52,7 +97,11 @@ def action_lint(args):
     rtl_dir = block_root/"rtl"
     # Convert all non-Python files in src with extensions ending in "py"
     in_files_list = []
-    for src_file in src_dir.iterdir():
+    if args.top == None:
+        dep_list = src_dir.iterdir()
+    else:
+        dep_list = compute_deps(args, pregen=True)
+    for src_file in dep_list:
         if src_file.suffix == "py" or src_file.suffix[-2:] != "py":
             continue
         in_files_list.append(src_file)
@@ -131,17 +180,19 @@ def main():
     # TODO: ensure that block value and top value are valid locations
     if args.block == None:
         args.block = get_hdl_block_name()
-    if args.top == None:
-        args.top = args.block + "_top"
+    if args.top != None:
+        # Remove file extension from top if provided
+        args.top = Path(args.top).stem
+
 
     print(f"Repo root: {get_repo_root()}")
     print(f"Current block: {args.block}")
     print(f"Top-level module: {args.top}")
-    # try:
-    #     args.action(args)
-    # except AttributeError:
-        # print("ERROR: No valid action listed. Run `lycan --help` to see the available actions")
-    args.action(args)
+    if hasattr(args, "action"):
+        args.action(args)
+    else:
+        print("ERROR: No valid action listed. Run `lycan --help` to see the available actions")
+        exit(1)
 
 
 if __name__ == "__main__":

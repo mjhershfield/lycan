@@ -3,7 +3,7 @@
 import argparse
 import em
 # import emlib
-import os
+from pathlib import Path
 import tempfile
 
 # class DebugInfoHooks(emlib.Hook):
@@ -29,7 +29,7 @@ def process_rtl(in_file_paths, out_file_path, debug=False):
         for in_file_path in in_file_paths:
             in_file = open(in_file_path, "r")
             # Add `list directives and save to temp file
-            full_in_file_path = os.path.realpath(in_file.name)
+            full_in_file_path = Path(in_file_path).resolve()
             temp_file.write(f"// THIS FILE AUTOMATICALLY GENERATED from {in_file.name}. DO NOT EDIT.\n\n")
             for i, line in enumerate(in_file):
                 if debug:

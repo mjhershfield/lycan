@@ -1,0 +1,5 @@
+# RTL Files for this module
+test/rtl/simple_module_two.gsv
+
+# Module dependencies
+test/simple_module
